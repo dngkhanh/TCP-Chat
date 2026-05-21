@@ -16,7 +16,7 @@ public class MyConnect {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             String URL = "jdbc:mysql://localhost:3306/Chat?allowPublicKeyRetrieval=true&useSSL=false";
-            Connection conn = DriverManager.getConnection(URL, "nigga", "nigga666");
+            Connection conn = DriverManager.getConnection(URL, "root", "123456");
             if (conn == null) {
                 throw new Exception("Khong the tao ket noi");
             }
