@@ -29,10 +29,10 @@ USE Chat;
 ### 3. Tạo Table Chat History
 ```sql
 CREATE TABLE chat_history (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    sender VARCHAR(100) NOT NULL,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sender VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT NOW()
 );
 ```
 
