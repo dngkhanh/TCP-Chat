@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package dack.database;
 
 import java.sql.Connection;
@@ -16,7 +12,7 @@ public class MyConnect {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             String URL = "jdbc:mysql://localhost:3306/Chat?allowPublicKeyRetrieval=true&useSSL=false";
-            Connection conn = DriverManager.getConnection(URL, "root", "123456");
+            Connection conn = DriverManager.getConnection(URL, "nigga", "nigga666");
             if (conn == null) {
                 throw new Exception("Khong the tao ket noi");
             }

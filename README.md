@@ -234,10 +234,10 @@ DACK/
 Dưới đây là giao diện của ứng dụng chat:
 
 ### Màn hình Đăng Nhập
-![Login UI](src/main/java/dack/pic/login.png)
+![Login UI](src/main/resources/pic/login.png)
 
 ### Màn hình Chat
-![Chat UI](src/main/java/dack/pic/chat.png)
+![Chat UI](src/main/resources/pic/chat.png)
 
 ---
 
