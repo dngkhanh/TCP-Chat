@@ -1,8 +1,8 @@
 # TCP Chat Application - Group Chat System
 
-Ứng dụng chat TCP Socket.
+Ứng dụng chat TCP Socket hỗ trợ nhiều nhóm chat riêng biệt, lưu và tự động tải lịch sử khi đăng nhập.
 
-**Version:** 2.0 (Multi-Group Support)
+**Version:** 2.1 (History Support)
 
 ---
 
@@ -64,11 +64,6 @@ GRANT ALL PRIVILEGES ON Chat.* TO 'chatuser'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-**Hoặc chạy SQL migration script:**
-```bash
-mysql -u root -p Chat < database_migration.sql
-```
-
 ---
 
 ## 🔧 Cấu Hình Database
@@ -81,7 +76,7 @@ String URL = "jdbc:mysql://localhost:3306/Chat?allowPublicKeyRetrieval=true&useS
 Connection conn = DriverManager.getConnection(URL, "your_username", "your_password");
 ```
 
-> ⚠️ **Lưu ý:** File `MyConnect.java` hiện đang hardcode username và password. Hãy đổi thành thông tin MySQL của bạn trước khi chạy.
+> ⚠️ **Lưu ý:** File `MyConnect.java` đang hardcode username và password. Hãy đổi thành thông tin MySQL của bạn trước khi chạy.
 
 ---
 
@@ -121,6 +116,10 @@ Chạy nhiều client cùng lúc bằng cách mở thêm terminal và lặp lạ
 **Dialog 2 - Chọn nhóm:**
 - Danh sách nhóm được tải tự động từ server (lấy từ database)
 - Chọn nhóm muốn join từ dropdown
+
+**Sau khi đăng nhập:**
+- 50 tin nhắn gần nhất của nhóm tự động hiển thị màu xám (non-blocking, không làm đơ UI)
+- Đường kẻ `--- Tin nhắn mới ---` phân cách lịch sử với tin nhắn real-time
 
 ---
 
@@ -199,9 +198,16 @@ netstat -an | findstr 8888    # Windows
 # Kiểm tra MySQL đang chạy
 mysql -u root -p -e "SELECT 1"
 
-# Tạo lại database
-mysql -u root -p < database_migration.sql
+# Tạo lại database theo hướng dẫn phần Tạo Database ở trên
 ```
+
+### Lịch sử không hiển thị
+
+**Nguyên nhân:**
+1. Bảng `chat_history` chưa có dữ liệu (nhóm mới)
+2. Lỗi kết nối DB khi server gọi `getHistory()`
+
+**Giải pháp:** Kiểm tra console của server để xem log lỗi chi tiết.
 
 ---
 
@@ -211,19 +217,18 @@ mysql -u root -p < database_migration.sql
 DACK/
 ├── src/main/java/dack/
 │   ├── client/
-│   │   ├── ChatClientGUI.java      (Giao diện client)
-│   │   └── IncomingReader.java     (Nhận tin từ server)
+│   │   ├── ChatClientGUI.java      (Giao diện client, xử lý login)
+│   │   └── IncomingReader.java     (Nhận & render tin: HISTORY, BROADCAST, SYSTEM)
 │   ├── server/
-│   │   ├── ChatServer.java         (Khởi động server)
-│   │   └── ClientHandler.java      (Xử lý client)
+│   │   ├── ChatServer.java         (Khởi động server, lắng nghe kết nối)
+│   │   └── ClientHandler.java      (Xử lý từng client, gửi history sau login)
 │   └── database/
-│       ├── DBAccess.java           (Truy cập DB)
-│       └── MyConnect.java          (Kết nối MySQL)
+│       ├── DBAccess.java           (Truy cập DB: update() và query())
+│       └── MyConnect.java          (Kết nối MySQL, getGroups(), getHistory(), validateGroup())
 ├── src/main/resources/pic/
 │   ├── login.png                   (Screenshot màn hình đăng nhập)
 │   └── chat.png                    (Screenshot màn hình chat)
 ├── pom.xml                         (Maven config)
-├── database_migration.sql          (Script tạo database)
 └── README.md                       (File này)
 ```
 
@@ -233,12 +238,14 @@ DACK/
 
 - ✅ **Multi-Group Chat:** Hỗ trợ nhiều nhóm chat riêng biệt
 - ✅ **Group Selection:** Client chọn nhóm từ dropdown khi đăng nhập
+- ✅ **Load History:** Tự động tải 50 tin nhắn gần nhất khi join nhóm (non-blocking)
 - ✅ **Real-time Chat:** Truyền tin tức thời qua TCP Socket
 - ✅ **Responsive UI:** Giao diện JTextPane HTML tự động canh lề khi resize
 - ✅ **Database History:** Lưu lịch sử chat với group_name và timestamp
 - ✅ **Multi-Client Support:** Đa người dùng chat cùng lúc
 - ✅ **Thread-Safe:** Sử dụng ConcurrentHashMap & CopyOnWriteArrayList
-- ✅ **SQL Injection Protection:** PreparedStatement cho database query
+- ✅ **SQL Injection Protection:** PreparedStatement cho tất cả database query
+- ✅ **HTML Escape:** Toàn bộ nội dung tin nhắn được escape tránh vỡ layout
 - ✅ **180-second Timeout:** Socket timeout để tránh treo kết nối
 - ✅ **System Messages:** Thông báo khi user vào/ra nhóm
 
@@ -270,8 +277,26 @@ CHAT|noi_dung                   (Gửi tin nhắn)
 GROUPS|GROUP1,GROUP2,GROUP3     (Danh sách nhóm từ database)
 LOGIN_SUCCESS|GroupName         (Đăng nhập thành công)
 LOGIN_FAILED|LyDo               (Đăng nhập thất bại)
-BROADCAST|sender|content|time  (Nhận tin từ user khác)
+HISTORY|sender|content|time    (Một tin nhắn lịch sử - gửi nhiều dòng liên tiếp)
+HISTORY_END                     (Kết thúc phần lịch sử)
+BROADCAST|sender|content|time  (Nhận tin real-time từ user khác)
 SYSTEM|thong_bao                (Thông báo hệ thống - user join/leave)
+```
+
+### Luồng kết nối đầy đủ
+
+```
+Client                              Server
+  |--- GET_GROUPS ----------------->|
+  |<-- GROUPS|G1,G2,G3 ------------|
+  |--- LOGIN|MSSV|Ten|Group ------->|
+  |<-- LOGIN_SUCCESS|Group ---------|
+  |<-- HISTORY|sender|msg|time -----|  (lặp lại, tối đa 50 dòng)
+  |<-- HISTORY_END -----------------|
+  |<-- SYSTEM|Ten da tham gia ------|
+  |         [chat bình thường]      |
+  |--- CHAT|noi_dung -------------->|
+  |<-- BROADCAST|sender|msg|time ---|  (gửi đến các client khác trong nhóm)
 ```
 
 ---
@@ -289,16 +314,9 @@ SYSTEM|thong_bao                (Thông báo hệ thống - user join/leave)
 - **Charset:** UTF-8 (hỗ trợ tiếng Việt)
 - **Database mặc định:** Chat
 - **Socket Timeout:** 180 giây (3 phút)
+- **Số tin lịch sử tải về:** 50 tin nhắn gần nhất mỗi lần join nhóm
+- **Load history:** Non-blocking — chạy trên `IncomingReader` thread, UI không bị đơ
 
 ---
 
-## 🔄 Cập Nhật Lần Sau
-
-- [✔] Hỗ trợ nhiều nhóm chat
-- [ ] Lưu lịch sử khi tắt/mở lại
-- [ ] Mã hóa mật khẩu
-- [ ] Giao diện đẹp hơn với JFoenix
-
----
-
-**Hỏi đáp:** Nếu có lỗi, kiểm tra console output để biết chi tiết lỗi.
+**Hỏi đáp:** Nếu có lỗi, kiểm tra console output của server để biết chi tiết lỗi.
