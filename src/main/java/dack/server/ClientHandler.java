@@ -109,6 +109,9 @@ public class ClientHandler extends Thread{
 
             sendMessage("LOGIN_SUCCESS|" + maNhom);
 
+            // Gửi lịch sử chat cho client vừa join
+            sendHistory(maNhom);
+
             broadcast(
                     "SYSTEM|" + hoTen + " da tham gia nhom",
                     this
@@ -188,6 +191,31 @@ public class ClientHandler extends Thread{
             System.err.println(hoTen + " - Loi IO: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Loi gui tin nhan cho " + hoTen + ": " + e.getMessage());
+        }
+    }
+
+    private void sendHistory(String groupName) {
+        try {
+            dack.database.MyConnect connect = new dack.database.MyConnect();
+            java.util.List<dack.database.MyConnect.ChatMessage> history =
+                    connect.getHistory(groupName, 50);
+
+            for (dack.database.MyConnect.ChatMessage msg : history) {
+                // Dùng cùng format BROADCAST để client tái sử dụng logic render
+                sendMessage("HISTORY|" + msg.sender + "|" + msg.message + "|" + msg.createdAt);
+            }
+
+            // Báo hiệu client đã nhận xong history
+            sendMessage("HISTORY_END");
+
+        } catch (Exception e) {
+            System.err.println("Loi gui history: " + e.getMessage());
+            // Vẫn gửi HISTORY_END để client không bị treo chờ
+            try {
+                sendMessage("HISTORY_END");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         }
     }
 
