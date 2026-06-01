@@ -74,7 +74,8 @@ public class IncomingReader extends Thread{
                     String content = parts[1];
 
                     SwingUtilities.invokeLater(() -> {
-                        String htmlMsg = "<div style='color: #0066cc; margin-bottom:5px;'><b>[SYSTEM]</b> " + content + "</div>";
+                        String htmlMsg = "<div style='color: #0066cc; margin-bottom:5px;'><b>[SYSTEM]</b> "
+                                + escapeHtml(content) + "</div>";
                         appendHtmlMessage(htmlMsg);
                     });
                 }

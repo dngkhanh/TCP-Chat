@@ -201,7 +201,6 @@ public class ClientHandler extends Thread{
                     connect.getHistory(groupName, 50);
 
             for (dack.database.MyConnect.ChatMessage msg : history) {
-                // Dùng cùng format BROADCAST để client tái sử dụng logic render
                 sendMessage("HISTORY|" + msg.sender + "|" + msg.message + "|" + msg.createdAt);
             }
 
