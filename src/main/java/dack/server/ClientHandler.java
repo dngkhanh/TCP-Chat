@@ -66,9 +66,20 @@ public class ClientHandler extends Thread{
                 return;
             }
 
+            // Xử lý GET_GROUPS request từ client
+            if (firstMessage.equals("GET_GROUPS")) {
+                handleGetGroups();
+                firstMessage = reader.readLine();
+
+                if (firstMessage == null) {
+                    closeEverything();
+                    return;
+                }
+            }
+
             String[] loginParts = firstMessage.split("\\|");
 
-            if (loginParts.length < 3 || !loginParts[0].equals("LOGIN")) {
+            if (loginParts.length < 4 || !loginParts[0].equals("LOGIN")) {
                 System.err.println("Login message khong hop le");
                 closeEverything();
                 return;
@@ -76,14 +87,22 @@ public class ClientHandler extends Thread{
 
             maSV = loginParts[1].trim();
             hoTen = loginParts[2].trim();
+            maNhom = loginParts[3].trim();
 
-            if (maSV.isEmpty() || hoTen.isEmpty()) {
-                System.err.println("MSSV hoac ho ten khong hop le");
+            if (maSV.isEmpty() || hoTen.isEmpty() || maNhom.isEmpty()) {
+                System.err.println("MSSV, ho ten hoac nhom khong hop le");
                 closeEverything();
                 return;
             }
 
-            maNhom = "GROUP_PTIT_01";
+            // Validate group từ database
+            dack.database.MyConnect connect = new dack.database.MyConnect();
+            if (!connect.validateGroup(maNhom)) {
+                System.err.println("Group '" + maNhom + "' khong ton tai trong database");
+                sendMessage("LOGIN_FAILED|Group khong hop le");
+                closeEverything();
+                return;
+            }
 
             groups.putIfAbsent(maNhom, new CopyOnWriteArrayList<>());
             groups.get(maNhom).add(this);
@@ -95,7 +114,7 @@ public class ClientHandler extends Thread{
                     this
             );
 
-            String sql = "INSERT INTO chat_history(sender, message) VALUES(?, ?)";
+            String sql = "INSERT INTO chat_history(sender, message, group_name, created_at) VALUES(?, ?, ?, NOW())";
 
             String message;
 
@@ -116,7 +135,7 @@ public class ClientHandler extends Thread{
 
                     broadcast(formatted, this);
 
-                    int result = db.update(sql, hoTen, content);
+                    int result = db.update(sql, hoTen, content, maNhom);
                     if (result < 0) {
                         System.err.println("Loi luu tin nhan vao database");
                     }
@@ -169,6 +188,29 @@ public class ClientHandler extends Thread{
             System.err.println(hoTen + " - Loi IO: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Loi gui tin nhan cho " + hoTen + ": " + e.getMessage());
+        }
+    }
+
+    private void handleGetGroups() {
+        try {
+            dack.database.MyConnect connect = new dack.database.MyConnect();
+            java.util.List<String> groupList = connect.getGroups();
+
+            if (groupList.isEmpty()) {
+                sendMessage("GROUPS|");
+                return;
+            }
+
+            String groupsStr = String.join(",", groupList);
+            sendMessage("GROUPS|" + groupsStr);
+
+        } catch (Exception e) {
+            System.err.println("Loi lay danh sach groups: " + e.getMessage());
+            try {
+                sendMessage("GROUPS|");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         }
     }
 
