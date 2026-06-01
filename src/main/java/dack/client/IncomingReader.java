@@ -2,8 +2,10 @@ package dack.client;
 
 import java.io.BufferedReader;
 
-import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
+import javax.swing.text.html.HTMLDocument;
+import javax.swing.text.html.HTMLEditorKit;
 
 /**
  *
@@ -11,9 +13,9 @@ import javax.swing.SwingUtilities;
  */
 public class IncomingReader extends Thread{
     private BufferedReader reader;
-    private JTextArea chatArea;
+    private JTextPane chatArea;
 
-    public IncomingReader(BufferedReader reader, JTextArea chatArea) {
+    public IncomingReader(BufferedReader reader, JTextPane chatArea) {
         this.reader = reader;
         this.chatArea = chatArea;
         setDaemon(true);
@@ -41,12 +43,13 @@ public class IncomingReader extends Thread{
                     String time = parts[3];
 
                     SwingUtilities.invokeLater(() -> {
-                        String message_text = sender + ": " + content;
-                        int fixedPosition = 120;
-                        int paddingNeeded = Math.max(1, fixedPosition - message_text.length());
-                        String paddingStr = " ".repeat(paddingNeeded);
-                        String formatted = message_text + paddingStr + "[" + time + "]\n";
-                        chatArea.append(formatted);
+                        String htmlMsg = "<table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:5px;'>"
+                            + "<tr>"
+                            + "<td>" + sender + ": " + content + "</td>"
+                            + "<td align='right' nowrap='nowrap'>[" + time + "]</td>"
+                            + "</tr>"
+                            + "</table>";
+                        appendHtmlMessage(htmlMsg);
                     });
 
                 } else if (action.equals("SYSTEM") && parts.length >= 2) {
@@ -54,9 +57,8 @@ public class IncomingReader extends Thread{
                     String content = parts[1];
 
                     SwingUtilities.invokeLater(() -> {
-                        chatArea.append(
-                                "[SYSTEM] " + content + "\n"
-                        );
+                        String htmlMsg = "<div style='color: #0066cc; margin-bottom:5px;'><b>[SYSTEM]</b> " + content + "</div>";
+                        appendHtmlMessage(htmlMsg);
                     });
                 }
             }
@@ -64,9 +66,7 @@ public class IncomingReader extends Thread{
         } catch (Exception e) {
 
             SwingUtilities.invokeLater(() -> {
-                chatArea.append(
-                        "\nMat ket noi toi server.\n"
-                );
+                appendHtmlMessage("<div style='color: #cc0000; margin-bottom:5px;'><b>[ERROR]</b> Mat ket noi toi server</div>");
             });
         } finally {
             try {
@@ -76,6 +76,17 @@ public class IncomingReader extends Thread{
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void appendHtmlMessage(String htmlContent) {
+        try {
+            HTMLDocument doc = (HTMLDocument) chatArea.getDocument();
+            HTMLEditorKit kit = (HTMLEditorKit) chatArea.getEditorKit();
+            kit.insertHTML(doc, doc.getLength(), htmlContent, 0, 0, null);
+            chatArea.setCaretPosition(doc.getLength());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
