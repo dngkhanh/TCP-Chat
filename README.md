@@ -315,7 +315,6 @@ Client                              Server
 - **Database mặc định:** Chat
 - **Socket Timeout:** 180 giây (3 phút)
 - **Số tin lịch sử tải về:** 50 tin nhắn gần nhất mỗi lần join nhóm
-- **Load history:** Non-blocking — chạy trên `IncomingReader` thread, UI không bị đơ
 
 ---
 
