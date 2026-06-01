@@ -17,7 +17,7 @@ public class MyConnect {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             String URL = "jdbc:mysql://localhost:3306/Chat?allowPublicKeyRetrieval=true&useSSL=false";
-            Connection conn = DriverManager.getConnection(URL, "root", "1234567");
+            Connection conn = DriverManager.getConnection(URL, "nigga", "nigga666");
             if (conn == null) {
                 throw new Exception("Khong the tao ket noi");
             }
@@ -52,6 +52,60 @@ public class MyConnect {
         }
 
         return groups;
+    }
+
+    /**
+     * Lấy lịch sử chat của một nhóm, giới hạn số lượng tin nhắn gần nhất.
+     * Trả về danh sách theo thứ tự thời gian tăng dần (cũ → mới).
+     */
+    public List<ChatMessage> getHistory(String groupName, int limit) {
+        List<ChatMessage> history = new ArrayList<>();
+        Connection conn = getConnection();
+        if (conn == null) return history;
+
+        // Dùng subquery để lấy N tin nhắn mới nhất rồi sắp xếp lại cũ → mới
+        String sql = "SELECT sender, message, created_at FROM ("
+                   + "  SELECT sender, message, created_at FROM chat_history"
+                   + "  WHERE group_name = ?"
+                   + "  ORDER BY created_at DESC LIMIT ?"
+                   + ") AS sub ORDER BY created_at ASC";
+
+        try (Connection connection = conn;
+             PreparedStatement pst = connection.prepareStatement(sql)) {
+
+            pst.setString(1, groupName);
+            pst.setInt(2, limit);
+
+            ResultSet rs = pst.executeQuery();
+            while (rs.next()) {
+                history.add(new ChatMessage(
+                        rs.getString("sender"),
+                        rs.getString("message"),
+                        rs.getString("created_at")
+                ));
+            }
+
+        } catch (Exception e) {
+            System.err.println("Loi query history: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return history;
+    }
+
+    /**
+     * Data class đơn giản chứa một tin nhắn lịch sử.
+     */
+    public static class ChatMessage {
+        public final String sender;
+        public final String message;
+        public final String createdAt;
+
+        public ChatMessage(String sender, String message, String createdAt) {
+            this.sender = sender;
+            this.message = message;
+            this.createdAt = createdAt;
+        }
     }
 
     public boolean validateGroup(String groupName) {
