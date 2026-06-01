@@ -1,15 +1,17 @@
-# TCP Chat Application
+# TCP Chat Application - Group Chat System
 
 Ứng dụng chat TCP Socket.
 
+**Version:** 2.0 (Multi-Group Support)
+
 ---
 
-
-## �📋 Yêu Cầu Hệ Thống
+## 📋 Yêu Cầu Hệ Thống
 
 - **Java:** JDK 8 hoặc cao hơn
 - **MySQL:** 5.7 hoặc cao hơn
 - **IDE:** NetBeans, Eclipse, IntelliJ IDEA (hoặc dùng lệnh terminal)
+- **MySQL Driver:** mysql-connector-j 8.3.0 (tự động nếu dùng Maven)
 
 ---
 
@@ -26,21 +28,45 @@ CREATE DATABASE Chat;
 USE Chat;
 ```
 
-### 3. Tạo Table Chat History
+### 3. Tạo Table Groups
 ```sql
-CREATE TABLE chat_history (
+CREATE TABLE IF NOT EXISTS chat_groups (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    sender VARCHAR(255) NOT NULL,
-    message TEXT NOT NULL,
-    created_at DATETIME DEFAULT NOW()
+    group_name VARCHAR(50) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-### 4. (Tuỳ chọn) Tạo User cho App
+### 4. Thêm Dữ liệu Mẫu
+```sql
+INSERT IGNORE INTO chat_groups (group_name) VALUES 
+('GROUP_PTIT_01'),
+('GROUP_PTIT_02'),
+('GROUP_PTIT_03');
+```
+
+### 5. Tạo Table Chat History
+```sql
+CREATE TABLE IF NOT EXISTS chat_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sender VARCHAR(100) NOT NULL,
+    message TEXT NOT NULL,
+    group_name VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_name) REFERENCES chat_groups(group_name)
+);
+```
+
+### 6. (Tuỳ chọn) Tạo User cho App
 ```sql
 CREATE USER 'chatuser'@'localhost' IDENTIFIED BY 'password123';
 GRANT ALL PRIVILEGES ON Chat.* TO 'chatuser'@'localhost';
 FLUSH PRIVILEGES;
+```
+
+**Hoặc chạy SQL migration script:**
+```bash
+mysql -u root -p Chat < database_migration.sql
 ```
 
 ---
@@ -49,13 +75,13 @@ FLUSH PRIVILEGES;
 
 Mở file: `src/main/java/dack/database/MyConnect.java`
 
-**Cập nhật thông tin kết nối:**
+**Cập nhật thông tin kết nối theo username/password MySQL của bạn:**
 ```java
 String URL = "jdbc:mysql://localhost:3306/Chat?allowPublicKeyRetrieval=true&useSSL=false";
-Connection conn = DriverManager.getConnection(URL, "root", "your_password");
-// Hoặc nếu dùng user riêng:
-// Connection conn = DriverManager.getConnection(URL, "chatuser", "password123");
+Connection conn = DriverManager.getConnection(URL, "your_username", "your_password");
 ```
+
+> ⚠️ **Lưu ý:** File `MyConnect.java` hiện đang hardcode username và password. Hãy đổi thành thông tin MySQL của bạn trước khi chạy.
 
 ---
 
@@ -63,13 +89,8 @@ Connection conn = DriverManager.getConnection(URL, "root", "your_password");
 
 ### 1. Biên Dịch (Compile)
 ```bash
-cd /home/dngnguyen/Documents/ky_254/DGHNM/DACK
+cd /path/to/DACK
 mvn clean compile
-```
-
-Hoặc nếu không dùng Maven:
-```bash
-javac -d target/classes src/main/java/dack/**/*.java
 ```
 
 ### 2. Chạy Server
@@ -87,23 +108,19 @@ Server dang chay tai port 8888
 mvn exec:java -Dexec.mainClass="dack.client.ChatClientGUI"
 ```
 
-Hoặc chạy nhiều client:
-```bash
-# Terminal 1
-mvn exec:java -Dexec.mainClass="dack.client.ChatClientGUI"
+Chạy nhiều client cùng lúc bằng cách mở thêm terminal và lặp lại lệnh trên.
 
-# Terminal 2
-mvn exec:java -Dexec.mainClass="dack.client.ChatClientGUI"
+### 4. Đăng Nhập & Chọn Nhóm
 
-# Terminal 3
-mvn exec:java -Dexec.mainClass="dack.client.ChatClientGUI"
-```
-
-### 4. Đăng Nhập
-- **IP Server:** `localhost`
+**Dialog 1 - Thông tin kết nối:**
+- **IP Server:** `localhost` (hoặc IP server nếu LAN)
 - **Port:** `8888`
 - **Họ Tên:** Tên của bạn
-- **MSSV:** Mã sinh viên (tuỳ ý)
+- **MSSV:** Mã sinh viên
+
+**Dialog 2 - Chọn nhóm:**
+- Danh sách nhóm được tải tự động từ server (lấy từ database)
+- Chọn nhóm muốn join từ dropdown
 
 ---
 
@@ -126,9 +143,7 @@ ipconfig
 
 Ví dụ: `192.168.1.100`
 
-**Bước 2:** Cấu hình Database trên Server (nếu DB ở máy khác)
-
-Nếu MySQL ở máy khác, sửa file `MyConnect.java`:
+**Bước 2:** Nếu MySQL ở máy khác, sửa file `MyConnect.java`:
 ```java
 // Thay localhost thành IP máy chứa MySQL
 String URL = "jdbc:mysql://192.168.1.50:3306/Chat?allowPublicKeyRetrieval=true&useSSL=false";
@@ -139,14 +154,8 @@ String URL = "jdbc:mysql://192.168.1.50:3306/Chat?allowPublicKeyRetrieval=true&u
 mvn exec:java -Dexec.mainClass="dack.server.ChatServer"
 ```
 
-Output:
-```
-Server dang chay tai port 8888
-```
-
 ### 2. Cấu Hình Client (Máy Client)
 
-**Mở ứng dụng client:**
 ```bash
 mvn exec:java -Dexec.mainClass="dack.client.ChatClientGUI"
 ```
@@ -173,20 +182,17 @@ mvn exec:java -Dexec.mainClass="dack.client.ChatClientGUI"
 # Linux: Cho phép port 8888
 sudo ufw allow 8888
 
-# Windows: Thêm exception trong Firewall
-# Settings > Firewall > Allow app through firewall > Add ChatServer
-
 # Kiểm tra server đang chạy
-netstat -an | grep 8888  # Linux/Mac
-netstat -an | findstr 8888  # Windows
+netstat -an | grep 8888       # Linux/Mac
+netstat -an | findstr 8888    # Windows
 ```
 
 ### Lỗi: "Loi ket noi DB"
 
 **Nguyên nhân:**
 1. MySQL chưa chạy
-2. Username/Password sai
-3. Database chưa tạo
+2. Username/Password trong `MyConnect.java` chưa được cập nhật
+3. Database `Chat` chưa tạo
 
 **Giải pháp:**
 ```bash
@@ -194,7 +200,7 @@ netstat -an | findstr 8888  # Windows
 mysql -u root -p -e "SELECT 1"
 
 # Tạo lại database
-mysql -u root -p < create_database.sql
+mysql -u root -p < database_migration.sql
 ```
 
 ---
@@ -213,25 +219,32 @@ DACK/
 │   └── database/
 │       ├── DBAccess.java           (Truy cập DB)
 │       └── MyConnect.java          (Kết nối MySQL)
-├── pom.xml                          (Maven config)
-└── README.md                        (File này)
+├── src/main/resources/pic/
+│   ├── login.png                   (Screenshot màn hình đăng nhập)
+│   └── chat.png                    (Screenshot màn hình chat)
+├── pom.xml                         (Maven config)
+├── database_migration.sql          (Script tạo database)
+└── README.md                       (File này)
 ```
 
 ---
 
 ## 🚀 Tính Năng
 
-- ✅ Chat real-time (TCP Socket)
-- ✅ Multi-client support (Đa người dùng)
-- ✅ Lưu lịch sử chat (Database)
-- ✅ Thread-safe (Thread an toàn)
-- ✅ Giao diện Swing đơn giản
+- ✅ **Multi-Group Chat:** Hỗ trợ nhiều nhóm chat riêng biệt
+- ✅ **Group Selection:** Client chọn nhóm từ dropdown khi đăng nhập
+- ✅ **Real-time Chat:** Truyền tin tức thời qua TCP Socket
+- ✅ **Responsive UI:** Giao diện JTextPane HTML tự động canh lề khi resize
+- ✅ **Database History:** Lưu lịch sử chat với group_name và timestamp
+- ✅ **Multi-Client Support:** Đa người dùng chat cùng lúc
+- ✅ **Thread-Safe:** Sử dụng ConcurrentHashMap & CopyOnWriteArrayList
+- ✅ **SQL Injection Protection:** PreparedStatement cho database query
+- ✅ **180-second Timeout:** Socket timeout để tránh treo kết nối
+- ✅ **System Messages:** Thông báo khi user vào/ra nhóm
 
 ---
 
-## � Screenshots
-
-Dưới đây là giao diện của ứng dụng chat:
+## 🖼️ Screenshots
 
 ### Màn hình Đăng Nhập
 ![Login UI](src/main/resources/pic/login.png)
@@ -241,19 +254,24 @@ Dưới đây là giao diện của ứng dụng chat:
 
 ---
 
-## �📊 Giao Thức Truyền Tin
+## 📊 Giao Thức Truyền Tin
 
 ### Từ Client → Server
+
 ```
-LOGIN|MSSV|HoTen
-CHAT|noi_dung_tin_nhan
+GET_GROUPS                      (Request danh sách nhóm có sẵn)
+LOGIN|MSSV|HoTen|Group          (Đăng nhập vào nhóm cụ thể)
+CHAT|noi_dung                   (Gửi tin nhắn)
 ```
 
 ### Từ Server → Client
+
 ```
-LOGIN_SUCCESS|MaNhom
-BROADCAST|sender|content|timestamp
-SYSTEM|thong_bao_he_thong
+GROUPS|GROUP1,GROUP2,GROUP3     (Danh sách nhóm từ database)
+LOGIN_SUCCESS|GroupName         (Đăng nhập thành công)
+LOGIN_FAILED|LyDo               (Đăng nhập thất bại)
+BROADCAST|sender|content|time  (Nhận tin từ user khác)
+SYSTEM|thong_bao                (Thông báo hệ thống - user join/leave)
 ```
 
 ---
@@ -261,8 +279,7 @@ SYSTEM|thong_bao_he_thong
 ## 👨‍💻 Tác Giả
 
 - **Tác giả:** dngnguyen
-- **Ngày tạo:** ####-##-##
-- **Môn học:** Đánh Giá Hiệu Năng Mạng 
+- **Môn học:** Đánh Giá Hiệu Năng Mạng
 
 ---
 
@@ -271,17 +288,17 @@ SYSTEM|thong_bao_he_thong
 - **Port mặc định:** 8888
 - **Charset:** UTF-8 (hỗ trợ tiếng Việt)
 - **Database mặc định:** Chat
-- **Mode:** GROUP_PTIT_01 (tất cả user vào 1 nhóm)
+- **Socket Timeout:** 180 giây (3 phút)
 
 ---
 
 ## 🔄 Cập Nhật Lần Sau
 
-- [ ] Hỗ trợ tạo nhiều nhóm chat
+- [✔] Hỗ trợ nhiều nhóm chat
 - [ ] Lưu lịch sử khi tắt/mở lại
 - [ ] Mã hóa mật khẩu
 - [ ] Giao diện đẹp hơn với JFoenix
 
 ---
 
-**Hỏi đáp:** Nếu có lỗi, kiểm tra console output hoặc file log để biết chi tiết lỗi.
+**Hỏi đáp:** Nếu có lỗi, kiểm tra console output để biết chi tiết lỗi.
