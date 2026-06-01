@@ -167,6 +167,10 @@ public class ChatClientGUI extends JFrame{
 
                 initGUI(maNhom);
 
+                // Đọc history từ server trước khi bắt IncomingReader
+                // để tránh race condition giữa history và tin nhắn mới
+                loadHistoryFromServer();
+
                 IncomingReader incomingReader =
                         new IncomingReader(reader, chatArea);
 
@@ -256,6 +260,53 @@ public class ChatClientGUI extends JFrame{
         });
     }
 
+    /**
+     * Đọc các dòng HISTORY|... từ server cho đến khi gặp HISTORY_END.
+     * Phải gọi trên EDT sau initGUI() và trước khi start IncomingReader.
+     */
+    private void loadHistoryFromServer() {
+        try {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.equals("HISTORY_END")) {
+                    // Thêm separator phân cách history với tin mới
+                    String separator = "<div style='border-top: 1px dashed #aaaaaa; "
+                            + "color: #888888; font-size: 10px; text-align: center; "
+                            + "margin: 6px 0; padding: 2px;'>"
+                            + "--- Tin nhắn mới ---</div>";
+                    appendHtmlMessage(separator);
+                    break;
+                }
+
+                String[] parts = line.split("\\|", 4);
+                if (parts.length >= 4 && parts[0].equals("HISTORY")) {
+                    String sender  = parts[1];
+                    String content = parts[2];
+                    String time    = parts[3];
+                    String htmlMsg = "<table width='100%' cellpadding='0' cellspacing='0' "
+                            + "style='margin-bottom:5px; color:#888888;'>"
+                            + "<tr>"
+                            + "<td>" + escapeHtml(sender) + ": " + escapeHtml(content) + "</td>"
+                            + "<td align='right' nowrap='nowrap' style='font-size:10px; padding-left:8px;'>"
+                            + "[" + escapeHtml(time) + "]</td>"
+                            + "</tr>"
+                            + "</table>";
+                    appendHtmlMessage(htmlMsg);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Loi doc history: " + e.getMessage());
+        }
+    }
+
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;");
+    }
+
     private List<String> fetchGroupsFromServer() {
         List<String> groups = new ArrayList<>();
 
@@ -322,8 +373,8 @@ public class ChatClientGUI extends JFrame{
                 String currentTime = java.time.LocalDateTime.now().toString();
                 String htmlMsg = "<table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:5px;'>"
                     + "<tr>"
-                    + "<td>Ban: " + msg + "</td>"
-                    + "<td align='right' nowrap='nowrap'>[" + currentTime + "]</td>"
+                    + "<td>Ban: " + escapeHtml(msg) + "</td>"
+                    + "<td align='right' nowrap='nowrap' style='font-size:10px; padding-left:8px;'>[" + currentTime + "]</td>"
                     + "</tr>"
                     + "</table>";
                 appendHtmlMessage(htmlMsg);
