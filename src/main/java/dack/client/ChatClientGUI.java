@@ -6,22 +6,27 @@ import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.text.html.HTMLDocument;
+import javax.swing.text.html.HTMLEditorKit;
 
 /**
  *
  * @author dngnguyen
  */
 public class ChatClientGUI extends JFrame{
-    private JTextArea chatArea;
+    private JTextPane chatArea;
     private JTextField messageField;
 
     private BufferedWriter writer;
@@ -87,6 +92,7 @@ public class ChatClientGUI extends JFrame{
                 }
 
                 this.socket = new Socket(ip, port);
+                this.socket.setSoTimeout(180000);
 
                 try {
                     writer = new BufferedWriter(
@@ -101,7 +107,41 @@ public class ChatClientGUI extends JFrame{
                     throw e;
                 }
 
-                writer.write("LOGIN|" + maSV + "|" + hoTen);
+                // Fetch groups từ server
+                List<String> groupList = fetchGroupsFromServer();
+
+                if (groupList.isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Khong the lay danh sach nhom tu server");
+                    if (this.socket != null) this.socket.close();
+                    this.reader = null;
+                    this.writer = null;
+                    continue;
+                }
+
+                // Hiển thị dialog chọn group
+                JComboBox<String> groupCombo = new JComboBox<>(groupList.toArray(new String[0]));
+
+                Object[] chooseGroupFields = {
+                        "Chon nhom:", groupCombo
+                };
+
+                int groupOption = JOptionPane.showConfirmDialog(
+                        null,
+                        chooseGroupFields,
+                        "Chon nhom",
+                        JOptionPane.OK_CANCEL_OPTION
+                );
+
+                if (groupOption != JOptionPane.OK_OPTION) {
+                    if (this.socket != null) this.socket.close();
+                    this.reader = null;
+                    this.writer = null;
+                    continue;
+                }
+
+                String maNhom = (String) groupCombo.getSelectedItem();
+
+                writer.write("LOGIN|" + maSV + "|" + hoTen + "|" + maNhom);
                 writer.newLine();
                 writer.flush();
 
@@ -118,14 +158,12 @@ public class ChatClientGUI extends JFrame{
                 String[] parts = response.split("\\|");
 
                 if (parts.length < 2 || !parts[0].equals("LOGIN_SUCCESS")) {
-                    JOptionPane.showMessageDialog(null, "Dang nhap that bai");
+                    JOptionPane.showMessageDialog(null, "Dang nhap that bai: " + (parts.length > 1 ? parts[1] : ""));
                     if (this.socket != null) this.socket.close();
                     this.reader = null;
                     this.writer = null;
                     continue;
                 }
-
-                String maNhom = parts[1];
 
                 initGUI(maNhom);
 
@@ -178,8 +216,10 @@ public class ChatClientGUI extends JFrame{
 
         setLocationRelativeTo(null);
 
-        chatArea = new JTextArea();
+        chatArea = new JTextPane();
+        chatArea.setContentType("text/html");
         chatArea.setEditable(false);
+        chatArea.setText("<html><body style='font-family: Arial; font-size: 12px;'></body></html>");
 
         JScrollPane scrollPane = new JScrollPane(chatArea);
 
@@ -216,6 +256,53 @@ public class ChatClientGUI extends JFrame{
         });
     }
 
+    private List<String> fetchGroupsFromServer() {
+        List<String> groups = new ArrayList<>();
+
+        try {
+            writer.write("GET_GROUPS");
+            writer.newLine();
+            writer.flush();
+
+            String response = reader.readLine();
+
+            if (response == null || response.isEmpty()) {
+                return groups;
+            }
+
+            String[] parts = response.split("\\|");
+
+            if (parts.length < 2 || !parts[0].equals("GROUPS")) {
+                return groups;
+            }
+
+            String groupsStr = parts[1];
+            if (!groupsStr.isEmpty()) {
+                String[] groupArray = groupsStr.split(",");
+                for (String group : groupArray) {
+                    groups.add(group.trim());
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Loi lay danh sach nhom: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return groups;
+    }
+
+    private void appendHtmlMessage(String htmlContent) {
+        try {
+            HTMLDocument doc = (HTMLDocument) chatArea.getDocument();
+            HTMLEditorKit kit = (HTMLEditorKit) chatArea.getEditorKit();
+            kit.insertHTML(doc, doc.getLength(), htmlContent, 0, 0, null);
+            chatArea.setCaretPosition(doc.getLength());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private void sendMessage() {
 
         try {
@@ -232,19 +319,21 @@ public class ChatClientGUI extends JFrame{
                 writer.newLine();
                 writer.flush();
 
-                String message_text = "Ban: " + msg;
-                int fixedPosition = 120;
-                int paddingNeeded = Math.max(1, fixedPosition - message_text.length());
-                String paddingStr = " ".repeat(paddingNeeded);
                 String currentTime = java.time.LocalDateTime.now().toString();
-                String formatted = message_text + paddingStr + "[" + currentTime + "]\n";
-                chatArea.append(formatted);
+                String htmlMsg = "<table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:5px;'>"
+                    + "<tr>"
+                    + "<td>Ban: " + msg + "</td>"
+                    + "<td align='right' nowrap='nowrap'>[" + currentTime + "]</td>"
+                    + "</tr>"
+                    + "</table>";
+                appendHtmlMessage(htmlMsg);
 
                 messageField.setText("");
             }
 
         } catch (java.io.IOException e) {
-            chatArea.append("[ERROR] Mat ket noi toi server\n");
+            String htmlMsg = "<div style='color: #cc0000; margin-bottom:5px;'><b>[ERROR]</b> Mat ket noi toi server</div>";
+            appendHtmlMessage(htmlMsg);
             messageField.setEditable(false);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Loi: " + e.getMessage());
