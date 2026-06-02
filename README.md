@@ -242,10 +242,28 @@ DACK/
 ## 🖼️ Screenshots
 
 ### Màn hình Đăng Nhập
-![Login UI](src/main/resources/pic/login.png)
+<div align="center">
+    <img src="src/main/resources/pic/login.png" alt="Login UI">
+</div>
+
+### Màn hình Group List
+<div align="center">
+    <img src="src/main/resources/pic/group.png" alt="Group List">
+</div>
 
 ### Màn hình Chat
-![Chat UI](src/main/resources/pic/chat.png)
+<div align="center">
+    <img src="src/main/resources/pic/chat.png" alt="Chat UI">
+</div>
+
+### Màn hình thông báo broadcast
+<div align="center">
+    <img src="src/main/resources/pic/brdSys.png" alt="System BroadCast">
+</div>
+
+<div align="center">
+    <img src="src/main/resources/pic/brdErr.png" alt="Error BroadCast">
+</div>
 
 ---
 
