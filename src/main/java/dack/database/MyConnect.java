@@ -54,10 +54,8 @@ public class MyConnect {
         return groups;
     }
 
-    /**
-     * Lấy lịch sử chat của một nhóm, giới hạn số lượng tin nhắn gần nhất.
-     * Trả về danh sách theo thứ tự thời gian tăng dần (cũ → mới).
-     */
+    // Lấy lịch sử chat của một nhóm, giới hạn số lượng tin nhắn gần nhất.
+    // Trả về danh sách theo thứ tự thời gian tăng dần (cũ → mới).
     public List<ChatMessage> getHistory(String groupName, int limit) {
         List<ChatMessage> history = new ArrayList<>();
         Connection conn = getConnection();
@@ -93,9 +91,7 @@ public class MyConnect {
         return history;
     }
 
-    /**
-     * Data class đơn giản chứa một tin nhắn lịch sử.
-     */
+    // Data class đơn giản chứa một tin nhắn lịch sử.
     public static class ChatMessage {
         public final String sender;
         public final String message;

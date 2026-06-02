@@ -42,10 +42,8 @@ public class DBAccess {
         return -1;
     }
 
-    /**
-     * Thực thi câu query SELECT và trả về danh sách các row dưới dạng Map.
-     * Mỗi Map là một row: key = tên cột, value = giá trị.
-     */
+    // Thực thi câu query SELECT và trả về danh sách các row dưới dạng Map.
+    // Mỗi Map là một row: key = tên cột, value = giá trị.
     public List<Map<String, Object>> query(String sql, Object... params) {
 
         List<Map<String, Object>> results = new ArrayList<>();

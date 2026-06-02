@@ -108,10 +108,8 @@ public class IncomingReader extends Thread{
         }
     }
 
-    /**
-     * Escape các ký tự HTML đặc biệt để tránh vỡ layout khi nội dung
-     * chứa <, >, &, ", '
-     */
+    // Escape các ký tự HTML đặc biệt để tránh vỡ layout khi nội dung
+    // chứa <, >, &, ", '
     private String escapeHtml(String text) {
         if (text == null) return "";
         return text.replace("&", "&amp;")
@@ -120,10 +118,8 @@ public class IncomingReader extends Thread{
                    .replace("\"", "&quot;");
     }
 
-    /**
-     * Tạo HTML row cho một tin nhắn.
-     * @param isHistory true = tin lịch sử (màu mờ), false = tin mới (màu bình thường)
-     */
+    // Tạo HTML row cho một tin nhắn.
+    // @param isHistory true = tin lịch sử (màu mờ), false = tin mới (màu bình thường)
     private String buildChatRow(String sender, String content, String time, boolean isHistory) {
         String color = isHistory ? "color: #888888;" : "";
         return "<table width='100%' cellpadding='0' cellspacing='0' "
