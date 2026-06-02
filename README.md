@@ -1,65 +1,89 @@
-# TCP Chat Application - Group Chat System
+# 💬 TCP Chat — Group Chat System
 
-Ứng dụng chat TCP Socket hỗ trợ nhiều nhóm chat riêng biệt, lưu và tự động tải lịch sử khi đăng nhập.
+<div align="center">
 
-**Version:** 2.1 (History Support)
+![Java](https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-5.7+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![Maven](https://img.shields.io/badge/Maven-Build-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)
+![License](https://img.shields.io/badge/License-Academic-green?style=for-the-badge)
+
+Ứng dụng chat TCP Socket.
+
+**Version 2.1 — History Support**
+
+</div>
+
+---
+
+## 📋 Mục Lục
+
+- [Yêu Cầu Hệ Thống](#-yêu-cầu-hệ-thống)
+- [Tạo Database](#️-tạo-database)
+- [Cấu Hình Database](#-cấu-hình-database)
+- [Chạy Local](#-chạy-local-trên-cùng-1-máy)
+- [Chạy Trên LAN](#-chạy-trên-lan-nhiều-máy)
+- [Cấu Trúc Project](#-cấu-trúc-project)
+- [Tính Năng](#-tính-năng)
+- [Giao Thức Truyền Tin](#-giao-thức-truyền-tin)
+- [Troubleshooting](#-troubleshooting)
 
 ---
 
 ## 📋 Yêu Cầu Hệ Thống
 
-- **Java:** JDK 8 hoặc cao hơn
-- **MySQL:** 5.7 hoặc cao hơn
-- **IDE:** NetBeans, Eclipse, IntelliJ IDEA (hoặc dùng lệnh terminal)
-- **MySQL Driver:** mysql-connector-j 8.3.0 (tự động nếu dùng Maven)
+| Thành phần | Phiên bản |
+|---|---|
+| **Java (JDK)** | 25 trở lên |
+| **MySQL** | 5.7 trở lên |
+| **Maven** | 3.6 trở lên |
+| **MySQL Connector/J** | 8.3.0 (tự động qua Maven) |
+
+> 💡 **IDE gợi ý:** NetBeans, IntelliJ IDEA, Eclipse — hoặc dùng lệnh terminal thuần.
 
 ---
 
 ## 🗄️ Tạo Database
 
-### 1. Kết Nối MySQL
+### Bước 1 — Kết nối MySQL
 ```bash
 mysql -u root -p
 ```
 
-### 2. Tạo Database
+### Bước 2 — Tạo Database & Bảng
 ```sql
-CREATE DATABASE Chat;
+-- Tạo database
+CREATE DATABASE IF NOT EXISTS Chat;
 USE Chat;
-```
 
-### 3. Tạo Table Groups
-```sql
+-- Bảng nhóm chat
 CREATE TABLE IF NOT EXISTS chat_groups (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id         INT AUTO_INCREMENT PRIMARY KEY,
     group_name VARCHAR(50) UNIQUE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-```
 
-### 4. Thêm Dữ liệu Mẫu
-```sql
-INSERT IGNORE INTO chat_groups (group_name) VALUES 
-('GROUP_PTIT_01'),
-('GROUP_PTIT_02'),
-('GROUP_PTIT_03');
-```
-
-### 5. Tạo Table Chat History
-```sql
+-- Bảng lịch sử tin nhắn
 CREATE TABLE IF NOT EXISTS chat_history (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    sender VARCHAR(100) NOT NULL,
-    message TEXT NOT NULL,
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    sender     VARCHAR(100) NOT NULL,
+    message    TEXT NOT NULL,
     group_name VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (group_name) REFERENCES chat_groups(group_name)
 );
 ```
 
-### 6. (Tuỳ chọn) Tạo User cho App
+### Bước 3 — Thêm Dữ Liệu Mẫu
 ```sql
-CREATE USER 'chatuser'@'localhost' IDENTIFIED BY 'password123';
+INSERT IGNORE INTO chat_groups (group_name) VALUES
+    ('GROUP_PTIT_01'),
+    ('GROUP_PTIT_02'),
+    ('GROUP_PTIT_03');
+```
+
+### (Tuỳ chọn) Tạo User Riêng cho App
+```sql
+CREATE USER 'chatuser'@'localhost' IDENTIFIED BY 'your_password';
 GRANT ALL PRIVILEGES ON Chat.* TO 'chatuser'@'localhost';
 FLUSH PRIVILEGES;
 ```
@@ -70,19 +94,19 @@ FLUSH PRIVILEGES;
 
 Mở file: `src/main/java/dack/database/MyConnect.java`
 
-**Cập nhật thông tin kết nối theo username/password MySQL của bạn:**
+Cập nhật thông tin kết nối theo MySQL của bạn:
 ```java
 String URL = "jdbc:mysql://localhost:3306/Chat?allowPublicKeyRetrieval=true&useSSL=false";
 Connection conn = DriverManager.getConnection(URL, "your_username", "your_password");
 ```
 
-> ⚠️ **Lưu ý:** File `MyConnect.java` đang hardcode username và password. Hãy đổi thành thông tin MySQL của bạn trước khi chạy.
+> ⚠️ **Lưu ý bảo mật:** File `MyConnect.java` đang hardcode username và password. **Thay thế bằng thông tin MySQL của bạn** trước khi chạy.
 
 ---
 
 ## 💻 Chạy Local (Trên Cùng 1 Máy)
 
-### 1. Biên Dịch (Compile)
+### 1. Biên Dịch
 ```bash
 cd /path/to/DACK
 mvn clean compile
@@ -93,7 +117,7 @@ mvn clean compile
 mvn exec:java -Dexec.mainClass="dack.server.ChatServer"
 ```
 
-Output:
+Output mong đợi:
 ```
 Server dang chay tai port 8888
 ```
@@ -103,111 +127,72 @@ Server dang chay tai port 8888
 mvn exec:java -Dexec.mainClass="dack.client.ChatClientGUI"
 ```
 
-Chạy nhiều client cùng lúc bằng cách mở thêm terminal và lặp lại lệnh trên.
+> Mở thêm terminal và lặp lại lệnh trên để chạy nhiều client cùng lúc.
 
-### 4. Đăng Nhập & Chọn Nhóm
+### 4. Luồng Đăng Nhập
 
-**Dialog 1 - Thông tin kết nối:**
-- **IP Server:** `localhost` (hoặc IP server nếu LAN)
-- **Port:** `8888`
-- **Họ Tên:** Tên của bạn
-- **MSSV:** Mã sinh viên
-
-**Dialog 2 - Chọn nhóm:**
-- Danh sách nhóm được tải tự động từ server (lấy từ database)
-- Chọn nhóm muốn join từ dropdown
-
-**Sau khi đăng nhập:**
-- 50 tin nhắn gần nhất của nhóm tự động hiển thị màu xám (non-blocking, không làm đơ UI)
-- Đường kẻ `--- Tin nhắn mới ---` phân cách lịch sử với tin nhắn real-time
+```
+┌─────────────────────────────────────┐
+│  Dialog 1 — Thông tin kết nối       │
+│  ─────────────────────────────────  │
+│  IP Server : localhost              │
+│  Port      : 8888                   │
+│  Họ Tên    : <tên của bạn>          │
+│  MSSV      : <mã sinh viên>         │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│  Dialog 2 — Chọn nhóm               │
+│  ─────────────────────────────────  │
+│  Danh sách nhóm tải tự động từ DB  │
+│  Chọn nhóm từ dropdown ▼            │
+└─────────────────────────────────────┘
+              ↓
+    50 tin nhắn lịch sử hiển thị (màu xám)
+    ──────── Tin nhắn mới ────────
+    Bắt đầu chat real-time 🚀
+```
 
 ---
 
 ## 🌐 Chạy Trên LAN (Nhiều Máy)
 
-### Yêu Cầu
-- Tất cả máy kết nối trên cùng mạng WiFi/LAN
-- Tường lửa (Firewall) cho phép port 8888
+### Yêu cầu
+- Tất cả máy cùng mạng WiFi / LAN
+- Firewall cho phép port `8888`
 
-### 1. Cấu Hình Server (Máy Server)
+### Máy chạy Server
 
-**Bước 1:** Lấy IP của máy Server
+**1. Lấy IP của máy Server:**
 ```bash
-# Linux/Mac
-ifconfig | grep "inet "
+# Linux / macOS
+ip addr show | grep "inet "
 
 # Windows
 ipconfig
 ```
+Ví dụ kết quả: `192.168.1.100`
 
-Ví dụ: `192.168.1.100`
-
-**Bước 2:** Nếu MySQL ở máy khác, sửa file `MyConnect.java`:
+**2. (Nếu MySQL ở máy khác) Sửa `MyConnect.java`:**
 ```java
-// Thay localhost thành IP máy chứa MySQL
+// Thay localhost → IP máy chứa MySQL
 String URL = "jdbc:mysql://192.168.1.50:3306/Chat?allowPublicKeyRetrieval=true&useSSL=false";
 ```
 
-**Bước 3:** Chạy Server
+**3. Chạy Server:**
 ```bash
 mvn exec:java -Dexec.mainClass="dack.server.ChatServer"
 ```
 
-### 2. Cấu Hình Client (Máy Client)
+### Máy chạy Client
 
 ```bash
 mvn exec:java -Dexec.mainClass="dack.client.ChatClientGUI"
 ```
 
-**Cửa sổ đăng nhập:**
-- **IP Server:** `192.168.1.100` (IP của máy Server)
+Ở Dialog đăng nhập:
+- **IP Server:** `192.168.1.100` *(IP máy đang chạy server)*
 - **Port:** `8888`
-- **Họ Tên:** Tên của bạn
-- **MSSV:** Mã sinh viên
-
----
-
-## 🔒 Troubleshooting
-
-### Lỗi: "Khong the ket noi toi server"
-
-**Nguyên nhân:**
-1. Server chưa chạy
-2. IP/Port sai
-3. Tường lửa chặn port 8888
-
-**Giải pháp:**
-```bash
-# Linux: Cho phép port 8888
-sudo ufw allow 8888
-
-# Kiểm tra server đang chạy
-netstat -an | grep 8888       # Linux/Mac
-netstat -an | findstr 8888    # Windows
-```
-
-### Lỗi: "Loi ket noi DB"
-
-**Nguyên nhân:**
-1. MySQL chưa chạy
-2. Username/Password trong `MyConnect.java` chưa được cập nhật
-3. Database `Chat` chưa tạo
-
-**Giải pháp:**
-```bash
-# Kiểm tra MySQL đang chạy
-mysql -u root -p -e "SELECT 1"
-
-# Tạo lại database theo hướng dẫn phần Tạo Database ở trên
-```
-
-### Lịch sử không hiển thị
-
-**Nguyên nhân:**
-1. Bảng `chat_history` chưa có dữ liệu (nhóm mới)
-2. Lỗi kết nối DB khi server gọi `getHistory()`
-
-**Giải pháp:** Kiểm tra console của server để xem log lỗi chi tiết.
 
 ---
 
@@ -215,39 +200,42 @@ mysql -u root -p -e "SELECT 1"
 
 ```
 DACK/
-├── src/main/java/dack/
-│   ├── client/
-│   │   ├── ChatClientGUI.java      (Giao diện client, xử lý login)
-│   │   └── IncomingReader.java     (Nhận & render tin: HISTORY, BROADCAST, SYSTEM)
-│   ├── server/
-│   │   ├── ChatServer.java         (Khởi động server, lắng nghe kết nối)
-│   │   └── ClientHandler.java      (Xử lý từng client, gửi history sau login)
-│   └── database/
-│       ├── DBAccess.java           (Truy cập DB: update() và query())
-│       └── MyConnect.java          (Kết nối MySQL, getGroups(), getHistory(), validateGroup())
-├── src/main/resources/pic/
-│   ├── login.png                   (Screenshot màn hình đăng nhập)
-│   └── chat.png                    (Screenshot màn hình chat)
-├── pom.xml                         (Maven config)
-└── README.md                       (File này)
+├── src/
+│   └── main/
+│       ├── java/dack/
+│       │   ├── client/
+│       │   │   ├── ChatClientGUI.java     # Giao diện Swing, xử lý đăng nhập & gửi tin
+│       │   │   └── IncomingReader.java    # Thread nhận & render tin: HISTORY, BROADCAST, SYSTEM
+│       │   ├── server/
+│       │   │   ├── ChatServer.java        # Khởi động server, lắng nghe kết nối TCP
+│       │   │   └── ClientHandler.java     # Thread xử lý từng client, gửi history sau login
+│       │   └── database/
+│       │       ├── DBAccess.java          # Thực thi SQL: update() và query()
+│       │       └── MyConnect.java         # Kết nối MySQL; getGroups(), getHistory(), validateGroup()
+│       └── resources/
+│           └── pic/
+│               ├── login.png              # Screenshot màn hình đăng nhập
+│               └── chat.png              # Screenshot màn hình chat
+├── pom.xml                               # Maven config (Java 25, mysql-connector-j 8.3.0)
+└── README.md
 ```
 
 ---
 
 ## 🚀 Tính Năng
 
-- ✅ **Multi-Group Chat:** Hỗ trợ nhiều nhóm chat riêng biệt
-- ✅ **Group Selection:** Client chọn nhóm từ dropdown khi đăng nhập
-- ✅ **Load History:** Tự động tải 50 tin nhắn gần nhất khi join nhóm (non-blocking)
-- ✅ **Real-time Chat:** Truyền tin tức thời qua TCP Socket
-- ✅ **Responsive UI:** Giao diện JTextPane HTML tự động canh lề khi resize
-- ✅ **Database History:** Lưu lịch sử chat với group_name và timestamp
-- ✅ **Multi-Client Support:** Đa người dùng chat cùng lúc
-- ✅ **Thread-Safe:** Sử dụng ConcurrentHashMap & CopyOnWriteArrayList
-- ✅ **SQL Injection Protection:** PreparedStatement cho tất cả database query
-- ✅ **HTML Escape:** Toàn bộ nội dung tin nhắn được escape tránh vỡ layout
-- ✅ **180-second Timeout:** Socket timeout để tránh treo kết nối
-- ✅ **System Messages:** Thông báo khi user vào/ra nhóm
+| Tính năng | Mô tả |
+|---|---|
+| ✅ **Multi-Group Chat** | Hỗ trợ nhiều nhóm chat riêng biệt, quản lý qua database |
+| ✅ **Group Selection** | Client chọn nhóm từ dropdown — danh sách tải từ server |
+| ✅ **Chat History** | Tự động tải 50 tin nhắn gần nhất khi join nhóm (non-blocking) |
+| ✅ **Real-time Chat** | Truyền tin tức thời qua TCP Socket |
+| ✅ **HTML Render UI** | `JTextPane` render HTML, tự canh lề khi resize |
+| ✅ **Thread-Safe** | `ConcurrentHashMap` + `CopyOnWriteArrayList` cho multi-client |
+| ✅ **SQL Injection Safe** | `PreparedStatement` cho toàn bộ database query |
+| ✅ **HTML Escape** | Escape `<`, `>`, `&`, `"` tránh vỡ layout |
+| ✅ **Socket Timeout** | 180 giây — tránh treo kết nối zombie |
+| ✅ **System Messages** | Thông báo khi user tham gia / rời nhóm |
 
 ---
 
@@ -261,43 +249,105 @@ DACK/
 
 ---
 
-## 📊 Giao Thức Truyền Tin
+## 📡 Giao Thức Truyền Tin
 
-### Từ Client → Server
+### Client → Server
+
+| Lệnh | Mô tả |
+|---|---|
+| `GET_GROUPS` | Yêu cầu danh sách nhóm hiện có |
+| `LOGIN\|MSSV\|HoTen\|Group` | Đăng nhập vào nhóm cụ thể |
+| `CHAT\|noi_dung` | Gửi tin nhắn |
+
+### Server → Client
+
+| Lệnh | Mô tả |
+|---|---|
+| `GROUPS\|G1,G2,G3` | Danh sách nhóm từ database |
+| `LOGIN_SUCCESS\|GroupName` | Đăng nhập thành công |
+| `LOGIN_FAILED\|LyDo` | Đăng nhập thất bại |
+| `HISTORY\|sender\|content\|time` | Một dòng tin lịch sử (lặp nhiều lần) |
+| `HISTORY_END` | Kết thúc phần lịch sử |
+| `BROADCAST\|sender\|content\|time` | Tin nhắn real-time từ user khác |
+| `SYSTEM\|thong_bao` | Thông báo hệ thống (join / leave) |
+
+### Luồng Kết Nối Đầy Đủ
 
 ```
-GET_GROUPS                      (Request danh sách nhóm có sẵn)
-LOGIN|MSSV|HoTen|Group          (Đăng nhập vào nhóm cụ thể)
-CHAT|noi_dung                   (Gửi tin nhắn)
+Client                                Server
+  │──── GET_GROUPS ─────────────────▶ │
+  │◀─── GROUPS|G1,G2,G3 ──────────── │
+  │──── LOGIN|MSSV|Ten|Group ───────▶ │  (validate group vs DB)
+  │◀─── LOGIN_SUCCESS|Group ───────── │
+  │◀─── HISTORY|sender|msg|time ───── │  (lặp lại, tối đa 50 dòng)
+  │◀─── HISTORY_END ───────────────── │
+  │◀─── SYSTEM|Ten da tham gia ─────  │
+  │           [chat bình thường]       │
+  │──── CHAT|noi_dung ──────────────▶ │
+  │◀─── BROADCAST|sender|msg|time ─── │  (gửi đến các client khác cùng nhóm)
 ```
 
-### Từ Server → Client
+---
 
-```
-GROUPS|GROUP1,GROUP2,GROUP3     (Danh sách nhóm từ database)
-LOGIN_SUCCESS|GroupName         (Đăng nhập thành công)
-LOGIN_FAILED|LyDo               (Đăng nhập thất bại)
-HISTORY|sender|content|time    (Một tin nhắn lịch sử - gửi nhiều dòng liên tiếp)
-HISTORY_END                     (Kết thúc phần lịch sử)
-BROADCAST|sender|content|time  (Nhận tin real-time từ user khác)
-SYSTEM|thong_bao                (Thông báo hệ thống - user join/leave)
-```
+## 🔒 Troubleshooting
 
-### Luồng kết nối đầy đủ
+<details>
+<summary><b>❌ "Khong the ket noi toi server"</b></summary>
 
+**Nguyên nhân có thể:**
+1. Server chưa chạy
+2. IP / Port nhập sai
+3. Firewall chặn port 8888
+
+**Giải pháp:**
+```bash
+# Kiểm tra server đang lắng nghe
+netstat -an | grep 8888        # Linux / macOS
+netstat -an | findstr 8888     # Windows
+
+# Mở port trên Linux (nếu dùng ufw)
+sudo ufw allow 8888
 ```
-Client                              Server
-  |--- GET_GROUPS ----------------->|
-  |<-- GROUPS|G1,G2,G3 ------------|
-  |--- LOGIN|MSSV|Ten|Group ------->|
-  |<-- LOGIN_SUCCESS|Group ---------|
-  |<-- HISTORY|sender|msg|time -----|  (lặp lại, tối đa 50 dòng)
-  |<-- HISTORY_END -----------------|
-  |<-- SYSTEM|Ten da tham gia ------|
-  |         [chat bình thường]      |
-  |--- CHAT|noi_dung -------------->|
-  |<-- BROADCAST|sender|msg|time ---|  (gửi đến các client khác trong nhóm)
+</details>
+
+<details>
+<summary><b>❌ "Loi ket noi DB"</b></summary>
+
+**Nguyên nhân có thể:**
+1. MySQL chưa khởi động
+2. Username / Password trong `MyConnect.java` chưa đúng
+3. Database `Chat` chưa được tạo
+
+**Giải pháp:**
+```bash
+# Kiểm tra MySQL đang chạy
+mysql -u root -p -e "SELECT 1"
+
+# Tạo lại database theo hướng dẫn phần Tạo Database ở trên
 ```
+</details>
+
+<details>
+<summary><b>❌ Lịch sử không hiển thị</b></summary>
+
+**Nguyên nhân có thể:**
+1. Bảng `chat_history` chưa có dữ liệu (nhóm mới, chưa ai nhắn)
+2. Lỗi kết nối DB khi server gọi `getHistory()`
+
+**Giải pháp:** Kiểm tra console của **server** để xem log lỗi chi tiết.
+</details>
+
+---
+
+## 📝 Thông Số Mặc Định
+
+| Tham số | Giá trị |
+|---|---|
+| Port | `8888` |
+| Charset | `UTF-8` |
+| Database | `Chat` |
+| Socket Timeout | `180 giây` (3 phút) |
+| Số tin lịch sử | `50 tin nhắn` gần nhất mỗi lần join |
 
 ---
 
@@ -308,14 +358,4 @@ Client                              Server
 
 ---
 
-## 📝 Ghi Chú
-
-- **Port mặc định:** 8888
-- **Charset:** UTF-8 (hỗ trợ tiếng Việt)
-- **Database mặc định:** Chat
-- **Socket Timeout:** 180 giây (3 phút)
-- **Số tin lịch sử tải về:** 50 tin nhắn gần nhất mỗi lần join nhóm
-
----
-
-**Hỏi đáp:** Nếu có lỗi, kiểm tra console output của server để biết chi tiết lỗi.
+> 💬 **Hỏi đáp:** Nếu gặp lỗi, kiểm tra console output của **server** để xem log chi tiết.
