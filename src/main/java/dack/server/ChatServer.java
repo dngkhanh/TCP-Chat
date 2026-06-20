@@ -3,10 +3,6 @@ package dack.server;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-/**
- *
- * @author dngnguyen
- */
 public class ChatServer {
 
     public static void main(String[] args) {
@@ -34,4 +30,3 @@ public class ChatServer {
         }
     }
 }
-

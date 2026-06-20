@@ -17,7 +17,7 @@ public class MyConnect {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             String URL = "jdbc:mysql://localhost:3306/Chat?allowPublicKeyRetrieval=true&useSSL=false";
-            Connection conn = DriverManager.getConnection(URL, "nigga", "nigga666");
+            Connection conn = DriverManager.getConnection(URL, "root", "123456");
             if (conn == null) {
                 throw new Exception("Khong the tao ket noi");
             }
@@ -124,5 +124,23 @@ public class MyConnect {
         }
 
         return false;
+    }
+    // Thêm hàm tạo nhóm mới vào DB
+    public boolean createGroup(String groupName) {
+        Connection conn = getConnection();
+        if (conn == null) return false;
+
+        String sql = "INSERT INTO chat_groups (group_name) VALUES (?)";
+        try (Connection connection = conn;
+             PreparedStatement pst = connection.prepareStatement(sql)) {
+             
+            pst.setString(1, groupName);
+            int rows = pst.executeUpdate();
+            return rows > 0;
+            
+        } catch (Exception e) {
+            System.err.println("Loi tao nhom moi: " + e.getMessage());
+            return false;
+        }
     }
 }
